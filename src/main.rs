@@ -139,13 +139,13 @@ impl Image{
         let x1 = p1_x as f32;
         let y1 = p1_y as f32;
 
-        for step in 0..50 {
-            let t = step as f32 * 0.02;
-
-            let x = (x0 + t * (x1 - x0)).round() as u32;
+        let start_x = x0 as i32;
+        let end_x = x1 as i32;
+        for x_int in start_x..=end_x {
+            let x = x_int as f32;
+            let t = (x - x0) / (x1 - x0); 
             let y = (y0 + t * (y1 - y0)).round() as u32;
-
-            self.set_pixel(x, y, color);
+            self.set_pixel(x_int as u32, y, color);
         }
     }
 }
