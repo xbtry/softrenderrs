@@ -131,11 +131,29 @@ impl Image{
             chunk.copy_from_slice(&rgb_bytes);
         }
     }
+
+    fn line(&mut self, p0_x: u32, p0_y: u32, p1_x: u32, p1_y: u32, color: Color) {
+        // Cast coordinates to floats upfront to handle negative directions safely
+        let x0 = p0_x as f32;
+        let y0 = p0_y as f32;
+        let x1 = p1_x as f32;
+        let y1 = p1_y as f32;
+
+        for step in 0..50 {
+            let t = step as f32 * 0.02;
+
+            let x = (x0 + t * (x1 - x0)).round() as u32;
+            let y = (y0 + t * (y1 - y0)).round() as u32;
+
+            self.set_pixel(x, y, color);
+        }
+    }
 }
 
 
 fn main() {
     let mut img = Image::new(2560,1440);
     img.set_background(Color::Pink);
+    img.line(50,50,500,500,Color::Black);
     img.save("output.png");
 }
