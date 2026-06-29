@@ -2,24 +2,73 @@ use image::{ImageBuffer, Rgb};
 
 #[derive(Debug,Clone,Copy)]
 enum Color{
+    // Primary & Secondary Colors
     Red,
     Green,
     Blue,
+    Yellow,
+    Cyan,
+    Magenta,
+    
+    // Monochrome Palette
     White,
+    LightGray,
+    Gray,
+    DarkGray,
     Black,
-    Custom(u8,u8,u8),
+    
+    // Extended Palette
+    Orange,
+    Brown,
+    Purple,
+    Pink,
+    Teal,
+    
+    // Escape hatch for arbitrary colors
+    Custom(u8, u8, u8),
 }
 
 impl Color{
     fn rgb(self) -> [u8; 3] {
         match self {
-            Color::Red => [255,0,0],
-            Color::Green => [0, 255, 0],
-            Color::Blue => [0, 0, 255],
-            Color::White => [255, 255, 255],
-            Color::Black => [0, 0, 0],
+            // Primaries & Secondaries
+            Color::Red     => [255, 0, 0],
+            Color::Green   => [0, 255, 0],
+            Color::Blue    => [0, 0, 255],
+            Color::Yellow  => [255, 255, 0],
+            Color::Cyan    => [0, 255, 255],
+            Color::Magenta => [255, 0, 255],
+            
+            // Monochrome
+            Color::White     => [255, 255, 255],
+            Color::LightGray => [200, 200, 200],
+            Color::Gray      => [128, 128, 128],
+            Color::DarkGray  => [64, 64, 64],
+            Color::Black     => [0, 0, 0],
+            
+            // Extended
+            Color::Orange => [255, 165, 0],
+            Color::Brown  => [139, 69, 19],
+            Color::Purple => [128, 0, 128],
+            Color::Pink   => [255, 192, 203],
+            Color::Teal   => [0, 128, 128],
+            
             Color::Custom(r, g, b) => [r, g, b],
         }
+    }
+
+    fn darker(self) -> Color {
+        let [r,g,b] = self.rgb();
+        Color::Custom(r/2, g/2, b/2)
+    }
+
+    fn lighter(self) -> Color {
+        let[r,g,b] = self.rgb();
+        Color::Custom(
+            r.saturating_add(50),
+            g.saturating_add(50),
+            b.saturating_add(50),
+        )
     }
 }
 
@@ -74,14 +123,19 @@ impl Image{
             self.data[index..index + 3].copy_from_slice(&rgb_bytes);
         }
     }
+
+    fn set_background(&mut self, color: Color) {
+        let rgb_bytes = color.rgb();
+
+        for chunk in self.data.chunks_exact_mut(3) {
+            chunk.copy_from_slice(&rgb_bytes);
+        }
+    }
 }
 
 
 fn main() {
-    let mut img = Image::new(2,2);
-    img.set_pixel(0,0,Color::Red);
-    img.set_pixel(1,0,Color::Blue);
-    img.set_pixel(0,1, Color::Green);
-    img.set_pixel(1,1, Color::White);
+    let mut img = Image::new(2560,1440);
+    img.set_background(Color::Pink);
     img.save("output.png");
 }
