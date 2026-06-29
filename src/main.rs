@@ -1,15 +1,21 @@
 use image::{ImageBuffer, Rgb};
 
-fn save_image(width: u32, height: u32, filename: &str){
+fn save_image(width: u32, height: u32, data: &[u8], filename: &str){
     let mut img = ImageBuffer::new(width, height);
 
     for(x,y,pixel) in img.enumerate_pixels_mut(){
-        let r = (x as f32 / width as f32 * 255.0) as u8;
-        let g = (y as f32 / height as f32 * 255.0) as u8;
-        let b = 150; // Keep the blue channel constant
 
-        // Assign the color value to the active pixel
-        *pixel = Rgb([r, g, b]);
+        let index = ((y * width + x) * 3) as usize;
+
+        if index + 2 < data.len(){
+            let r = data[index]; 
+            let g = data[index+1];
+            let b = data[index+2];
+            *pixel = Rgb([r,g,b]);
+        }
+        else {
+            *pixel = Rgb([0, 0, 0]);
+        }
     }
 
     // 4. Write the buffer data to a file (format is inferred from extension)
@@ -20,5 +26,13 @@ fn save_image(width: u32, height: u32, filename: &str){
 }
 
 fn main() {
-    save_image(500,500,"gradient.png")
+    let width = 2;
+    let height = 2;
+    let dummy_data: Vec<u8> = vec![
+        255,0,0,
+        255,255,0,
+        255,255,255,
+        0,255,0,
+    ];
+    save_image(width, height, &dummy_data, "output.png");
 }
