@@ -182,30 +182,90 @@ impl Image{
 
     fn render_wireframe(&mut self, model: &Model) {
         let w = self.width as f32;
-    let h = self.height as f32;
+        let h = self.height as f32;
 
-    for face in &model.faces {
-        let idx0 = face[0];
-        let idx1 = face[1];
-        let idx2 = face[2];
+        for face in &model.faces {
+            let idx0 = face[0];
+            let idx1 = face[1];
+            let idx2 = face[2];
 
-        let v0 = model.vertices[idx0];
-        let v1 = model.vertices[idx1];
-        let v2 = model.vertices[idx2];
+            let v0 = model.vertices[idx0];
+            let v1 = model.vertices[idx1];
+            let v2 = model.vertices[idx2];
 
-        let x0 = ((v0[0] + 1.0) * w / 2.0) as u32;
-        let y0 = (h - ((v0[1] + 1.0)) * h / 2.0) as u32;
+            let x0 = ((v0[0] + 1.0) * w / 2.0) as u32;
+            let y0 = (h - ((v0[1] + 1.0)) * h / 2.0) as u32;
 
-        let x1 = ((v1[0] + 1.0) * w / 2.0) as u32;
-        let y1 = (h - ((v1[1] + 1.0)) * h / 2.0) as u32;
+            let x1 = ((v1[0] + 1.0) * w / 2.0) as u32;
+            let y1 = (h - ((v1[1] + 1.0)) * h / 2.0) as u32;
 
-        let x2 = ((v2[0] + 1.0) * w / 2.0) as u32;
-        let y2 = (h - ((v2[1] + 1.0)) * h / 2.0) as u32;
+            let x2 = ((v2[0] + 1.0) * w / 2.0) as u32;
+            let y2 = (h - ((v2[1] + 1.0)) * h / 2.0) as u32;
 
-        self.line(x0, y0, x1, y1, Color::White);
-        self.line(x1, y1, x2, y2, Color::White);
-        self.line(x2, y2, x0, y0, Color::White);
+            self.line(x0, y0, x1, y1, Color::White);
+            self.line(x1, y1, x2, y2, Color::White);
+            self.line(x2, y2, x0, y0, Color::White);
+        }
     }
+    
+    fn fill_bottom_triangle(&mut self, v0_x: u32, v0_y: u32, v1_x: u32, v1_y: u32, v2_x: u32, v2_y: u32, color: Color) {
+        if v1_y == v0_y { return; }
+
+        let invslope1_bottom = (v1_x as f32 - v0_x as f32) / (v1_y as f32 - v0_y as f32);
+        let invslope2_bottom = (v2_x as f32 - v0_x as f32) / (v1_y as f32 - v0_y as f32);
+
+        let mut curx1 = v0_x as f32;
+        let mut curx2 = v0_x as f32;
+
+        for i in v0_y..=v1_y {
+            let curx1_u = curx1.round() as u32;
+            let curx2_u = curx2.round() as u32;
+            
+            self.line(curx1_u, i, curx2_u, i, color);
+            curx1 += invslope1_bottom;
+            curx2 += invslope2_bottom;
+        }
+    }
+
+    fn fill_top_triangle(&mut self, v0_x: u32, v0_y: u32, v1_x: u32, v1_y: u32, v2_x: u32, v2_y: u32, color: Color) {
+        if v2_y == v0_y || v2_y == v1_y { return; }
+
+        let invslope1_top = (v2_x as f32 - v0_x as f32) / (v2_y as f32 - v0_y as f32);
+        let invslope2_top = (v2_x as f32 - v1_x as f32) / (v2_y as f32 - v1_y as f32);
+
+        let mut curx1 = v0_x as f32;
+        let mut curx2 = v1_x as f32;
+
+        for i in v1_y..=v2_y {
+            let curx1_u = curx1.round() as u32;
+            let curx2_u = curx2.round() as u32;
+
+            self.line(curx1_u, i, curx2_u, i, color);
+            curx1 += invslope1_top;
+            curx2 += invslope2_top;
+        }
+    }
+
+    fn triangle(&mut self, v0_x: u32, v0_y: u32, v1_x: u32, v1_y: u32, v2_x: u32, v2_y: u32, color: Color){
+        let mut vertices = [(v0_x, v0_y), (v1_x, v1_y), (v2_x, v2_y)];
+        vertices.sort_by_key(|v| v.1);
+
+        let (v0_x, v0_y) = vertices[0]; 
+        let (v1_x, v1_y) = vertices[1];
+        let (v2_x, v2_y) = vertices[2];
+
+        if v0_y == v2_y {
+            self.line(v0_x, v0_y, v1_x, v1_y, color);
+            self.line(v1_x, v1_y, v2_x, v2_y, color);
+            return;
+        }
+
+        let t = (v1_y as f32 - v0_y as f32) / (v2_y as f32 - v0_y as f32);
+        let v3_x = (v0_x as f32 + t * (v2_x as f32 - v0_x as f32)).round() as u32;
+        let v3_y = v1_y;
+
+        self.fill_bottom_triangle(v0_x, v0_y, v1_x, v1_y, v3_x, v3_y, color);
+        self.fill_top_triangle(v1_x, v1_y, v3_x, v3_y, v2_x, v2_y, color);
     }
 }
 
@@ -217,7 +277,10 @@ fn main() {
     let mut img = Image::new(WIDTH, HEIGHT);
 
     let mut model = Model::new();
-    model.load_model("assets/diablo3_pose.obj");
-    img.render_wireframe(&model);
+//    model.load_model("assets/diablo3_pose.obj");
+//    img.render_wireframe(&model);
+    img.triangle(7, 45, 35, 100, 45,  60, Color::Red);
+    img.triangle(120, 35, 90,   5, 45, 110, Color::Red);
+    img.triangle(115, 83, 80,  90, 85, 120, Color::Red);
     img.save("output.png");
 }
