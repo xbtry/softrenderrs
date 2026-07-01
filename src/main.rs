@@ -1,5 +1,5 @@
 use image::{ImageBuffer, Rgb};
-
+use std::mem;
 #[derive(Debug,Clone,Copy)]
 enum Color{
     // Primary & Secondary Colors
@@ -134,10 +134,21 @@ impl Image{
 
     fn line(&mut self, p0_x: u32, p0_y: u32, p1_x: u32, p1_y: u32, color: Color) {
         // Cast coordinates to floats upfront to handle negative directions safely
-        let x0 = p0_x as f32;
-        let y0 = p0_y as f32;
-        let x1 = p1_x as f32;
-        let y1 = p1_y as f32;
+        let mut x0 = p0_x as f32;
+        let mut y0 = p0_y as f32;
+        let mut x1 = p1_x as f32;
+        let mut y1 = p1_y as f32;
+        
+        let steep = (x0-x1).abs() < (y0 - y1).abs();
+
+        if steep {
+            mem::swap(&mut x0, &mut y0);
+            mem::swap(&mut x1, &mut y1);
+        }
+        if x0 > x1 {
+            mem::swap(&mut x0, &mut x1);
+            mem::swap(&mut y0, &mut y1);
+        }
 
         let start_x = x0 as i32;
         let end_x = x1 as i32;
@@ -145,7 +156,11 @@ impl Image{
             let x = x_int as f32;
             let t = (x - x0) / (x1 - x0); 
             let y = (y0 + t * (y1 - y0)).round() as u32;
-            self.set_pixel(x_int as u32, y, color);
+            if steep {
+                self.set_pixel(y, x_int as u32, color);
+            } else {
+                self.set_pixel(x_int as u32, y, color);
+            }
         }
     }
 }
