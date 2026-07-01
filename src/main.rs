@@ -1,3 +1,5 @@
+mod model_loader;
+use crate::model_loader::Model;
 use rand::prelude::*;
 use image::{ImageBuffer, Rgb};
 use std::mem;
@@ -177,6 +179,34 @@ impl Image{
             }
         }
     }
+
+    fn render_wireframe(&mut self, model: &Model) {
+        let w = self.width as f32;
+    let h = self.height as f32;
+
+    for face in &model.faces {
+        let idx0 = face[0];
+        let idx1 = face[1];
+        let idx2 = face[2];
+
+        let v0 = model.vertices[idx0];
+        let v1 = model.vertices[idx1];
+        let v2 = model.vertices[idx2];
+
+        let x0 = ((v0[0] + 1.0) * w / 2.0) as u32;
+        let y0 = (h - ((v0[1] + 1.0)) * h / 2.0) as u32;
+
+        let x1 = ((v1[0] + 1.0) * w / 2.0) as u32;
+        let y1 = (h - ((v1[1] + 1.0)) * h / 2.0) as u32;
+
+        let x2 = ((v2[0] + 1.0) * w / 2.0) as u32;
+        let y2 = (h - ((v2[1] + 1.0)) * h / 2.0) as u32;
+
+        self.line(x0, y0, x1, y1, Color::White);
+        self.line(x1, y1, x2, y2, Color::White);
+        self.line(x2, y2, x0, y0, Color::White);
+    }
+    }
 }
 
 
@@ -184,31 +214,10 @@ fn main() {
     const WIDTH: u32 = 2560;
     const HEIGHT: u32 = 1440;
 
-    let mut img = Image::new(WIDTH,HEIGHT);
-    
-    let mut rng = rand::rng();
+    let mut img = Image::new(WIDTH, HEIGHT);
 
-    println!("Starting render of {} lines", 1 << 24);
-
-    let start_time = Instant::now();
-
-    for _ in 00..(1 << 24) {
-        let ax = rng.random_range(0..WIDTH);
-        let ay = rng.random_range(0..HEIGHT);
-        let bx = rng.random_range(0..WIDTH);
-        let by = rng.random_range(0..HEIGHT);
-        
-        let color = Color::Custom(
-            rng.random_range(0..255),
-            rng.random_range(0..255),
-            rng.random_range(0..255),
-        );
-
-        img.line(ax, ay, bx, by, color);
-    }
-
-    let elapsed = start_time.elapsed();
-    println!("Finished in: {:?}", elapsed);
-
+    let mut model = Model::new();
+    model.load_model("assets/diablo3_pose.obj");
+    img.render_wireframe(&model);
     img.save("output.png");
 }
