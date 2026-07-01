@@ -1,5 +1,8 @@
+use rand::prelude::*;
 use image::{ImageBuffer, Rgb};
 use std::mem;
+use std::time::Instant;
+
 #[derive(Debug,Clone,Copy)]
 enum Color{
     // Primary & Secondary Colors
@@ -152,10 +155,21 @@ impl Image{
 
         let start_x = x0 as i32;
         let end_x = x1 as i32;
+
+        if start_x == end_x {
+            if steep {
+                self.set_pixel(y0 as u32, start_x as u32, color);
+            } else {
+                self.set_pixel(start_x as u32, y0 as u32, color);
+            }
+            return;
+        }
+
         for x_int in start_x..=end_x {
             let x = x_int as f32;
-            let t = (x - x0) / (x1 - x0); 
+            let t = (x - x0) / (x1 - x0);
             let y = (y0 + t * (y1 - y0)).round() as u32;
+
             if steep {
                 self.set_pixel(y, x_int as u32, color);
             } else {
@@ -167,8 +181,34 @@ impl Image{
 
 
 fn main() {
-    let mut img = Image::new(2560,1440);
-    img.set_background(Color::Pink);
-    img.line(50,50,500,500,Color::Black);
+    const WIDTH: u32 = 2560;
+    const HEIGHT: u32 = 1440;
+
+    let mut img = Image::new(WIDTH,HEIGHT);
+    
+    let mut rng = rand::rng();
+
+    println!("Starting render of {} lines", 1 << 24);
+
+    let start_time = Instant::now();
+
+    for _ in 00..(1 << 24) {
+        let ax = rng.random_range(0..WIDTH);
+        let ay = rng.random_range(0..HEIGHT);
+        let bx = rng.random_range(0..WIDTH);
+        let by = rng.random_range(0..HEIGHT);
+        
+        let color = Color::Custom(
+            rng.random_range(0..255),
+            rng.random_range(0..255),
+            rng.random_range(0..255),
+        );
+
+        img.line(ax, ay, bx, by, color);
+    }
+
+    let elapsed = start_time.elapsed();
+    println!("Finished in: {:?}", elapsed);
+
     img.save("output.png");
 }
