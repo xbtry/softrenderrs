@@ -106,7 +106,7 @@ impl Image {
         let bbmaxy = v0_y.max(v1_y).max(v2_y).min(self.height - 1);
 
         let total_area = Self::signed_triangle_area(ax, ay, bx, by, cx, cy);
-        if total_area.abs() < f32::EPSILON { return; }
+        if total_area < 1.0 { return; }
 
         for y in bbminy..=bbmaxy {
             for x in bbminx..=bbmaxx {
@@ -158,19 +158,31 @@ impl Image {
 fn main() {
     const WIDTH: u32 = 2560;
     const HEIGHT: u32 = 1440;
-    const TRIANGLE_COUNT: usize = 20000;
+    let w = WIDTH as f32;
+    let h = HEIGHT as f32;
+    let mut model = Model::new();
+    model.load_model("assets/diablo3_pose.obj");
+    let mut img = Image::new(WIDTH,HEIGHT);
+    let mut triangles = Vec::new();
 
-    let mut triangles = Vec::with_capacity(TRIANGLE_COUNT);
-    let mut img_seq = Image::new(WIDTH, HEIGHT);
-    let mut img_par = Image::new(WIDTH, HEIGHT);
+    for face in &model.faces {
+        let idx0 = face[0];
+        let idx1 = face[1];
+        let idx2 = face[2];
 
-    for _ in 0..TRIANGLE_COUNT {
-        let x0 = rand::random_range(0..WIDTH);
-        let y0 = rand::random_range(0..HEIGHT);
-        let x1 = rand::random_range(0..WIDTH);
-        let y1 = rand::random_range(0..HEIGHT);
-        let x2 = rand::random_range(0..WIDTH);
-        let y2 = rand::random_range(0..HEIGHT);
+        let v0 = model.vertices[idx0];
+        let v1 = model.vertices[idx1];
+        let v2 = model.vertices[idx2];
+
+        // Convert raw model floats [-1.0, 1.0] to screen space pixel coordinates (u32)
+        let ax = ((v0[0] + 1.0) * w / 2.0) as u32;
+        let ay = (h - (v0[1] + 1.0) * h / 2.0) as u32;
+
+        let bx = ((v1[0] + 1.0) * w / 2.0) as u32;
+        let by = (h - (v1[1] + 1.0) * h / 2.0) as u32;
+
+        let cx = ((v2[0] + 1.0) * w / 2.0) as u32;
+        let cy = (h - (v2[1] + 1.0) * h / 2.0) as u32;
 
         let color = match rand::random_range(0..5) {
             0 => Color::Red,
@@ -178,27 +190,11 @@ fn main() {
             2 => Color::Blue,
             3 => Color::Yellow,
             _ => Color::Cyan,
-        };
+        }; 
 
-        triangles.push((x0, y0, x1, y1, x2, y2, color));
+        triangles.push((ax, ay, bx, by, cx, cy, color));
     }
 
-    println!("Total Triangle count: {}", TRIANGLE_COUNT);
-    println!("--------------------------------------------------");
-
-    let start_seq = Instant::now();
-    for t in &triangles {
-        img_seq.triangle_barycentric(t.0, t.1, t.2, t.3, t.4, t.5, t.6);
-    }
-    let duration_seq = start_seq.elapsed();
-    println!("Normal execution total time:   {:.2?}", duration_seq);
-    println!("--------------------------------------------------");
-
-    let start_par = Instant::now();
-    img_par.parallel_triangle(&triangles);
-    let duration_par = start_par.elapsed();
-    println!("Parallel execution total time: {:.2?}", duration_par);
-    println!("--------------------------------------------------");
-
-    img_par.save("output.png");
+    img.parallel_triangle(&triangles);
+    img.save("output.png");
 }
